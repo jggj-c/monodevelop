@@ -69,7 +69,11 @@ namespace MonoDevelop.Ide
 		RootWorkspace workspace;
 
 		SelectReferenceDialog selDialog = null;
-		
+
+		public event EventHandler BeforeCreateNewSolution;
+		public event EventHandler AfterCreateNewSolution;
+		public bool IsCreatingNewSolution { get; private set; }
+
 		internal ProjectOperations ()
 		{
 		}
@@ -749,8 +753,17 @@ namespace MonoDevelop.Ide
 			newProjectDialog.ShowTemplateSelection = showTemplateSelection;
 			var show = newProjectDialog.Show ();
 			if (show) {
-				WelcomePage.WelcomePageService.HideWelcomePageOrWindow ();
-				return await newProjectDialog.ProjectCreation;
+				try {
+					IsCreatingNewSolution = true;
+					BeforeCreateNewSolution?.Invoke (this, EventArgs.Empty);
+
+					WelcomePage.WelcomePageService.HideWelcomePageOrWindow ();
+					var isProjectCreated = await newProjectDialog.ProjectCreation;
+					return isProjectCreated;
+				} finally {
+					IsCreatingNewSolution = false;
+					AfterCreateNewSolution?.Invoke (this, EventArgs.Empty);
+				}
 			}
 			return false;
 		}
